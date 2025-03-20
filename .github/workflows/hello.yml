@@ -1,0 +1,17 @@
+name : Hello World
+
+on:
+  push: 
+  pull_request:
+
+jobs:
+  build:
+      runs-on: self-hosted
+
+      steps: 
+        - name: Checkout repository
+          uses: actions/checkout@v4 
+
+        - name: Print message
+          run: echo "Hello World running on self-hosted runner"
+  
