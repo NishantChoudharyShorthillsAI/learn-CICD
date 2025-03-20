@@ -1,0 +1,16 @@
+name : Manual Trigger
+
+on:
+  workflow_dispatch
+
+jobs:
+  manual-trigger:
+      runs-on: self-hosted
+
+      steps: 
+        - name: Checkout repository
+          uses: actions/checkout@v4 
+
+        - name: Print message
+          run: echo "Hello World running on self-hosted runner Manually"
+  
