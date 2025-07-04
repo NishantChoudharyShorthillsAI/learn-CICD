@@ -1,16 +1,87 @@
-name : Manual Trigger
+name: Sync Release and Tag
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
+    inputs:
+      bump_major:
+        description: "Do you want to update MAJOR version?"
+        required: false
+        default: "no"
+        type: choice
+        options:
+          - "yes"
+          - "no"
+      bump_minor:
+        description: "Do you want to update MINOR version?"
+        required: false
+        default: "no"
+        type: choice
+        options:
+          - "yes"
+          - "no"
+      bump_patch:
+        description: "Do you want to update PATCH version?"
+        required: false
+        default: "yes"
+        type: choice
+        options:
+          - "yes"
+          - "no"
 
 jobs:
-  manual-trigger:
-      runs-on: self-hosted
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      steps: 
-        - name: Checkout repository
-          uses: actions/checkout@v4 
+      - name: Fetch latest tag
+        id: get_latest_tag
+        run: |
+          LATEST_TAG=$(git tag --list --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+          if [[ -z "$LATEST_TAG" ]]; then
+            LATEST_TAG="v0.0.0"
+          fi
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+          echo "Latest tag found: $LATEST_TAG"
 
-        - name: Print message
-          run: echo "Hello World running on self-hosted runner Manually"
-  
+      - name: Calculate Next Tag from Input
+        id: calculate_tag
+        run: |
+          VERSION_REGEX="v([0-9]+)\.([0-9]+)\.([0-9]+)"
+          if [[ "$LATEST_TAG" =~ $VERSION_REGEX ]]; then
+              latest_major="${BASH_REMATCH[1]}"
+              latest_minor="${BASH_REMATCH[2]}"
+              latest_patch="${BASH_REMATCH[3]}"
+          else
+              latest_major=0
+              latest_minor=0
+              latest_patch=0
+          fi
+
+          bump_major="${{ github.event.inputs.bump_major }}"
+          bump_minor="${{ github.event.inputs.bump_minor }}"
+          bump_patch="${{ github.event.inputs.bump_patch }}"
+
+          new_major=$latest_major
+          new_minor=$latest_minor
+          new_patch=$latest_patch
+
+          if [[ "$bump_major" == "yes" ]]; then
+              new_major=$((latest_major + 1))
+              new_minor=0
+              new_patch=0
+          elif [[ "$bump_minor" == "yes" ]]; then
+              new_minor=$((latest_minor + 1))
+              new_patch=0
+          elif [[ "$bump_patch" == "yes" ]]; then
+              new_patch=$((latest_patch + 1))
+          fi
+
+          NEW_TAG="v${new_major}.${new_minor}.${new_patch}"
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+          echo "New tag will be: $NEW_TAG"
+
+    
