@@ -42,7 +42,7 @@ jobs:
         run: |
           LATEST_TAG=$(git tag --list --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
           if [[ -z "$LATEST_TAG" ]]; then
-            LATEST_TAG="v0.0.0"
+            LATEST_TAG=""
           fi
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
           echo "Latest tag found: $LATEST_TAG"
@@ -68,8 +68,11 @@ jobs:
           new_major=$latest_major
           new_minor=$latest_minor
           new_patch=$latest_patch
-
-          if [[ "$bump_major" == "yes" ]]; then
+          if [[ -z "$LATEST_TAG" ]];then
+             new_major=$((latest_major + 1))
+              new_minor=0
+              new_patch=0          
+          elif [[ "$bump_major" == "yes" ]]; then
               new_major=$((latest_major + 1))
               new_minor=0
               new_patch=0
@@ -83,5 +86,3 @@ jobs:
           NEW_TAG="v${new_major}.${new_minor}.${new_patch}"
           echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
           echo "New tag will be: $NEW_TAG"
-
-    
