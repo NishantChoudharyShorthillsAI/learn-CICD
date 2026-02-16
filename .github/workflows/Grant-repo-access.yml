@@ -3,8 +3,8 @@ name: Grant GitHub Repo Access
 on:
   workflow_dispatch:
     inputs:
-      github_username:
-        description: "GitHub Username to grant access"
+      github_usernames:
+        description: "GitHub usernames (comma-separated, e.g. john,alice,bob)"
         required: true
         type: string
 
@@ -50,10 +50,20 @@ jobs:
           echo "repo=$REPO" >> $GITHUB_OUTPUT
           echo "permission=$PERMISSION" >> $GITHUB_OUTPUT
 
-      - name: Grant repository access
+      - name: Grant repository access to multiple users
         run: |
-          curl -X PUT \
-            -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ steps.vars.outputs.owner }}/${{ steps.vars.outputs.repo }}/collaborators/${{ inputs.github_username }} \
-            -d "{\"permission\":\"${{ steps.vars.outputs.permission }}\"}"
+          IFS=',' read -ra USERS <<< "${{ inputs.github_usernames }}"
+
+          for USER in "${USERS[@]}"; do
+            USER=$(echo "$USER" | xargs) # trim spaces
+            echo "Granting ${{ steps.vars.outputs.permission }} access to $USER"
+
+            curl -s -o response.json -w "%{http_code}" \
+              -X PUT \
+              -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ steps.vars.outputs.owner }}/${{ steps.vars.outputs.repo }}/collaborators/$USER \
+              -d "{\"permission\":\"${{ steps.vars.outputs.permission }}\"}"
+
+            echo " → Done for $USER"
+          done
